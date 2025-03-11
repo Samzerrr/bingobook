@@ -1,7 +1,7 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
+$servername = "dpg-cv7t1vhc1ekc73d213gg-a";
+$username = "bingo_book_fsc_user";
+$password = "pbHgBTq6BvyMbiCSSDJDVPWVnqzqNwRf";
 $dbname = "bingo_book_fsc";
 
 // Create connection
