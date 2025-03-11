@@ -1,0 +1,218 @@
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Book Ninja</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+            }
+        }
+    </script>
+    <script type="module" src="main.js" defer></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="scroll-container">
+                <svg class="scroll-left" viewBox="0 0 100 200">
+                    <path d="M0,0 L80,0 Q100,0 100,20 L100,180 Q100,200 80,200 L0,200 L20,100 L0,0 Z" fill="#e0c088" />
+                    <path d="M3,3 L77,3 Q97,3 97,23 L97,177 Q97,197 77,197 L3,197 L23,100 L3,3 Z" fill="#f0d098" />
+                </svg>
+                <h1>Bingo Book</h1>
+                <svg class="scroll-right" viewBox="0 0 100 200">
+                    <path d="M100,0 L20,0 Q0,0 0,20 L0,180 Q0,200 20,200 L100,200 L80,100 L100,0 Z" fill="#e0c088" />
+                    <path d="M97,3 L23,3 Q3,3 3,23 L3,177 Q3,197 23,197 L97,197 L77,100 L97,3 Z" fill="#f0d098" />
+                </svg>
+            </div>
+        </header>
+        
+        <main>
+            <div class="control-panel">
+                <button @click="openPermissionModal" class="add-btn">Ajouter une Entrée</button>
+                <input type="text" v-model="searchQuery" placeholder="Rechercher des ninjas..." class="search-input">
+            </div>
+            
+            <div class="bingo-book">
+                <transition-group name="fade" tag="div" class="ninja-cards">
+                    <div v-for="ninja in filteredNinjas" :key="ninja.id" class="ninja-card" @click="viewNinjaDetails(ninja)">
+                        <div class="ninja-header">
+                            <h2>{{ ninja.name }}</h2>
+                            <div class="rank-badge">{{ ninja.rank }}</div>
+                        </div>
+                        <div class="ninja-content">
+                            <div class="ninja-avatar">
+                                <img v-if="ninja.imageUrl" :src="ninja.imageUrl" alt="Avatar de ninja" class="ninja-image">
+                                <svg v-else viewBox="0 0 100 100" class="avatar-placeholder">
+                                    <circle cx="50" cy="35" r="25" fill="#888" />
+                                    <rect x="25" y="65" width="50" height="35" rx="5" fill="#888" />
+                                </svg>
+                            </div>
+                            <div class="ninja-details">
+                                <p><strong>Village:</strong> {{ ninja.village }}</p>
+                                <p><strong>Âge:</strong> {{ ninja.age }}</p>
+                                <p><strong>Taille:</strong> {{ ninja.height }}</p>
+                                <p><strong>Cheveux:</strong> {{ ninja.hair }}</p>
+                                <p><strong>Yeux:</strong> {{ ninja.eyes }}</p>
+                                <p><strong>Capacités:</strong> {{ ninja.abilities }}</p>
+                                <p><strong>Prime:</strong> {{ ninja.bounty }}</p>
+                            </div>
+                        </div>
+                        <div class="ninja-footer">
+                            <div class="danger-level">
+                                <span v-for="n in ninja.dangerLevel" :key="n" class="danger-star">★</span>
+                                <span v-for="n in (5-ninja.dangerLevel)" :key="n+'empty'" class="danger-star empty">☆</span>
+                            </div>
+                            <button @click="removeNinja(ninja.id)" class="remove-btn">Supprimer</button>
+                        </div>
+                    </div>
+                </transition-group>
+            </div>
+            
+            <!-- Password Modal -->
+            <div v-if="showPasswordModal" class="modal-overlay">
+                <div class="password-modal">
+                    <h2>Autorisation Requise</h2>
+                    <p>Entrez le mot de passe administrateur pour gérer le Bingo Book.</p>
+                    <div class="form-group">
+                        <label>Mot de passe:</label>
+                        <input type="password" v-model="passwordInput" @keyup.enter="checkPermission">
+                        <p v-if="passwordError" class="error-message">{{ passwordError }}</p>
+                    </div>
+                    <div class="form-buttons">
+                        <button @click="checkPermission" class="save-btn">Valider</button>
+                        <button @click="showPasswordModal = false; pendingDeleteId = null" class="cancel-btn">Annuler</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="showAddForm" class="modal-overlay">
+                <div class="add-form-modal">
+                    <h2>Ajouter un Nouveau Ninja</h2>
+                    <form @submit.prevent="addNinja">
+                        <div class="form-group">
+                            <label>Nom:</label>
+                            <input type="text" v-model="newNinja.name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Village:</label>
+                            <select v-model="newNinja.village" required>
+                                <option value="Konoha">Konoha</option>
+                                <option value="Suna">Suna</option>
+                                <option value="Kiri">Kiri</option>
+                                <option value="Kusa">Kusa</option>
+                                <option value="Nukenin">Nukenin</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Rang:</label>
+                                <select v-model="newNinja.rank" required>
+                                    <option value="Rang-D">Rang-D</option>
+                                    <option value="Rang-C">Rang-C</option>
+                                    <option value="Rang-B">Rang-B</option>
+                                    <option value="Rang-A">Rang-A</option>
+                                    <option value="Rang-S">Rang-S</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Âge:</label>
+                                <input type="number" v-model.number="newNinja.age">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Taille:</label>
+                                <input type="text" v-model="newNinja.height" placeholder="ex: 175 cm">
+                            </div>
+                            <div class="form-group">
+                                <label>Prime:</label>
+                                <input type="text" v-model="newNinja.bounty" placeholder="ex: 10,000,000 ryō">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Cheveux:</label>
+                                <input type="text" v-model="newNinja.hair" placeholder="Couleur/style">
+                            </div>
+                            <div class="form-group">
+                                <label>Yeux:</label>
+                                <input type="text" v-model="newNinja.eyes" placeholder="Couleur/spécial">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Capacités:</label>
+                            <textarea v-model="newNinja.abilities" placeholder="Jutsu et capacités connues"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Image du Ninja:</label>
+                            <input type="file" accept="image/*" @change="handleImageUpload" class="file-input">
+                            <div v-if="newNinja.imageUrl" class="image-preview">
+                                <img :src="newNinja.imageUrl" alt="Aperçu de l'image">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Niveau de Danger (1-5):</label>
+                            <div class="star-select">
+                                <span 
+                                    v-for="n in 5" 
+                                    :key="n" 
+                                    @click="newNinja.dangerLevel = n"
+                                    :class="{ 'selected': n <= newNinja.dangerLevel }"
+                                    class="danger-star-select"
+                                >★</span>
+                            </div>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="save-btn">Enregistrer</button>
+                            <button type="button" @click="showAddForm = false" class="cancel-btn">Annuler</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Add Ninja Detail Modal -->
+            <div v-if="showNinjaDetail && selectedNinja" class="modal-overlay">
+                <div class="ninja-detail-modal" @click.stop>
+                    <div class="ninja-detail-header">
+                        <h2>{{ selectedNinja.name }}</h2>
+                        <div class="rank-badge">{{ selectedNinja.rank }}</div>
+                    </div>
+                    <div class="ninja-detail-content">
+                        <div class="ninja-detail-avatar">
+                            <img v-if="selectedNinja.imageUrl" :src="selectedNinja.imageUrl" alt="Avatar de ninja" class="ninja-image">
+                            <svg v-else viewBox="0 0 100 100" class="avatar-placeholder">
+                                <circle cx="50" cy="35" r="25" fill="#888" />
+                                <rect x="25" y="65" width="50" height="35" rx="5" fill="#888" />
+                            </svg>
+                        </div>
+                        <div class="ninja-detail-info">
+                            <p><strong>Village:</strong> {{ selectedNinja.village }}</p>
+                            <p><strong>Âge:</strong> {{ selectedNinja.age }}</p>
+                            <p><strong>Taille:</strong> {{ selectedNinja.height }}</p>
+                            <p><strong>Cheveux:</strong> {{ selectedNinja.hair }}</p>
+                            <p><strong>Yeux:</strong> {{ selectedNinja.eyes }}</p>
+                            <p><strong>Capacités:</strong> {{ selectedNinja.abilities }}</p>
+                            <p><strong>Prime:</strong> {{ selectedNinja.bounty }}</p>
+                        </div>
+                    </div>
+                    <div class="ninja-detail-footer">
+                        <div class="detail-danger-level">
+                            <span v-for="n in selectedNinja.dangerLevel" :key="n" class="danger-star">★</span>
+                            <span v-for="n in (5-selectedNinja.dangerLevel)" :key="n+'empty'" class="danger-star empty">☆</span>
+                        </div>
+                        <button @click="showNinjaDetail = false" class="detail-close-btn">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Base de Données Bingo Book Konohagakure - Villages Cachés De La Feuille</p>
+            <p>Par Riku Yamauchi</p>
+        </footer>
+    </div>
+</body>
+</html>
