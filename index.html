@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bingo Book Konoha</title>
+    <title>Bingo Book Ninja</title>
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
         {
@@ -36,7 +36,13 @@
             </div>
             
             <div class="bingo-book">
-                <transition-group name="fade" tag="div" class="ninja-cards">
+                <div v-if="isLoading" class="loading-indicator">
+                    <svg class="spinner" viewBox="0 0 50 50">
+                        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                    </svg>
+                    <p>Chargement des données...</p>
+                </div>
+                <transition-group v-else name="fade" tag="div" class="ninja-cards">
                     <div v-for="ninja in filteredNinjas" :key="ninja.id" class="ninja-card" @click="viewNinjaDetails(ninja)">
                         <div class="ninja-header">
                             <h2>{{ ninja.name }}</h2>
@@ -210,7 +216,7 @@
         </main>
         
         <footer>
-            <p>Base de Données Bingo Book Konohagakure - Villages Cachés De La Feuille</p>
+            <p>Base de Données Bingo Book - Alliance des Villages Cachés</p>
             <p>Par Riku Yamauchi</p>
         </footer>
     </div>

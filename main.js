@@ -1,55 +1,23 @@
-import { createApp, ref, computed, watch } from 'vue';
+import { createApp, ref, computed, watch, onMounted } from 'vue';
 
 createApp({
     setup() {
-        // Load ninjas from localStorage or use sample data
-        const storedNinjas = localStorage.getItem('ninjas');
-        const ninjas = ref(storedNinjas ? JSON.parse(storedNinjas) : [
-            {
-                id: 1,
-                name: "Kakashi Hatake",
-                village: "Konoha",
-                rank: "Jonin",
-                age: 31,
-                height: "181 cm",
-                hair: "Argenté",
-                eyes: "Noir, Sharingan (gauche)",
-                abilities: "Ninja Copieur, Éclair Pourfendeur, 1000+ jutsu",
-                bounty: "3,000,000 ryō",
-                dangerLevel: 4
-            },
-            {
-                id: 2,
-                name: "Gaara",
-                village: "Suna",
-                rank: "Kage",
-                age: 19,
-                height: "166 cm",
-                hair: "Rouge",
-                eyes: "Turquoise",
-                abilities: "Contrôle du Sable, Bouclier de Sable, Cercueil du Désert",
-                bounty: "5,000,000 ryō",
-                dangerLevel: 5
-            },
-            {
-                id: 3,
-                name: "Itachi Uchiha",
-                village: "Nukenin",
-                rank: "Rang-S",
-                age: 21,
-                height: "178 cm",
-                hair: "Noir",
-                eyes: "Noir, Sharingan, Mangekyo Sharingan",
-                abilities: "Sharingan, Genjutsu, Amaterasu, Tsukuyomi",
-                bounty: "10,000,000 ryō",
-                dangerLevel: 5
-            }
-        ]);
+        // State variables for ninjas
+        const ninjas = ref([]);
+        const isLoading = ref(true);
 
-        // Watch for changes in the ninjas array and save to localStorage
-        watch(ninjas, (newValue) => {
-            localStorage.setItem('ninjas', JSON.stringify(newValue));
-        }, { deep: true });
+        // Fetch ninjas from API on page load
+        onMounted(async () => {
+            try {
+                const response = await fetch('api.php');
+                const data = await response.json();
+                ninjas.value = data;
+                isLoading.value = false;
+            } catch (error) {
+                console.error("Error fetching ninjas:", error);
+                isLoading.value = false;
+            }
+        });
 
         const searchQuery = ref('');
         const showAddForm = ref(false);
@@ -91,32 +59,53 @@ createApp({
         });
         
         // Add a new ninja
-        const addNinja = () => {
+        const addNinja = async () => {
             const ninja = { ...newNinja.value };
-            ninja.id = Date.now(); // Simple unique ID
             
-            ninjas.value.push(ninja);
-            
-            // Reset form
-            newNinja.value = {
-                name: '',
-                village: 'Konoha',
-                rank: 'Rang-C',
-                age: null,
-                height: '',
-                hair: '',
-                eyes: '',
-                abilities: '',
-                bounty: '',
-                dangerLevel: 3,
-                imageUrl: ''
-            };
-            
-            showAddForm.value = false;
+            try {
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ninja: ninja,
+                        password: 'naruto123'  // In real app, this would be handled more securely
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    ninjas.value.push(result.ninja);
+                    
+                    // Reset form
+                    newNinja.value = {
+                        name: '',
+                        village: 'Konoha',
+                        rank: 'Rang-C',
+                        age: null,
+                        height: '',
+                        hair: '',
+                        eyes: '',
+                        abilities: '',
+                        bounty: '',
+                        dangerLevel: 3,
+                        imageUrl: ''
+                    };
+                    
+                    showAddForm.value = false;
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (error) {
+                console.error("Error adding ninja:", error);
+                alert('Une erreur est survenue lors de l\'ajout du ninja');
+            }
         };
         
         // Remove a ninja
-        const removeNinja = (id) => {
+        const removeNinja = async (id) => {
             if (!hasPermission.value) {
                 showPasswordModal.value = true;
                 passwordInput.value = '';
@@ -127,7 +116,26 @@ createApp({
             }
             
             if (confirm('Êtes-vous sûr de vouloir supprimer ce ninja du Bingo Book ?')) {
-                ninjas.value = ninjas.value.filter(ninja => ninja.id !== id);
+                try {
+                    const response = await fetch(`api.php`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `id=${id}&password=naruto123`
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        ninjas.value = ninjas.value.filter(ninja => ninja.id !== id);
+                    } else {
+                        alert('Erreur: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error("Error removing ninja:", error);
+                    alert('Une erreur est survenue lors de la suppression');
+                }
             }
         };
         
@@ -189,6 +197,7 @@ createApp({
         
         return {
             ninjas,
+            isLoading,
             searchQuery,
             showAddForm,
             newNinja,
