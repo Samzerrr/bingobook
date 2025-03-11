@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "bingo_book";
+$dbname = "bingo_book_fsc";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
